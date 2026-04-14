@@ -47,6 +47,13 @@ nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; display: flex; a
 .qbtn-next { background: var(--gold); color: var(--ink); }
 .qbtn-next:hover { background: var(--gold-light); transform: translateY(-1px); }
 .qbtn-next:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+.quiz-multi-hint { font-size: 0.7rem; font-family: 'DM Mono', monospace; letter-spacing: 0.06em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 0.85rem; }
+.quiz-how { background: #1c3328; border-bottom: 1px solid rgba(255,255,255,0.07); padding: 2.5rem 4rem; }
+.quiz-how-inner { max-width: 760px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2.5rem; }
+.quiz-how-item { display: flex; gap: 1rem; align-items: flex-start; }
+.quiz-how-num { font-family: 'DM Mono', monospace; font-size: 0.7rem; color: var(--gold-light); letter-spacing: 0.08em; min-width: 22px; padding-top: 3px; }
+.quiz-how-item h4 { font-size: 0.78rem; font-weight: 600; color: white; margin-bottom: 0.4rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.quiz-how-item p { font-size: 0.82rem; color: rgba(255,255,255,0.5); line-height: 1.65; }
 #results-panel { padding: 5rem 4rem; background: var(--warm); max-width: 1100px; margin: 0 auto; }
 .res-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--sage); margin-bottom: 0.75rem; }
 .res-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(1.8rem, 3vw, 2.8rem); font-weight: 700; color: var(--ink); line-height: 1.15; margin-bottom: 1rem; }
@@ -82,6 +89,31 @@ footer p { font-size: 0.78rem; color: rgba(255,255,255,0.3); }
   <h1>Your personalized strategy<br>starts here.</h1>
   <p>Answer six questions. Receive a strategy designed for your specific role, your specific workplace, and the specific community you serve.</p>
 </div>
+<div class="quiz-how">
+  <div class="quiz-how-inner">
+    <div class="quiz-how-item">
+      <div class="quiz-how-num">01</div>
+      <div>
+        <h4>How it works</h4>
+        <p>Six questions identify your workplace type, role, and the community you serve. The first three answers drive your personalized result. Questions 4–6 add context that appears as tags on your strategy.</p>
+      </div>
+    </div>
+    <div class="quiz-how-item">
+      <div class="quiz-how-num">02</div>
+      <div>
+        <h4>What your result means</h4>
+        <p>Your result is a tailored action plan with specific recommendations drawn from research on community engagement and organizational roles — not a template or generic advice.</p>
+      </div>
+    </div>
+    <div class="quiz-how-item">
+      <div class="quiz-how-num">03</div>
+      <div>
+        <h4>How accurate it is</h4>
+        <p>Accuracy depends on how closely questions 1–3 reflect your actual situation. Question 1 allows multiple selections — if you work in a hybrid or multi-sector setting, select all that apply and the quiz routes to the most relevant strategy.</p>
+      </div>
+    </div>
+  </div>
+</div>
 <section id="quiz">
   <div class="quiz-wrapper">
     <div class="quiz-header">
@@ -97,6 +129,7 @@ footer p { font-size: 0.78rem; color: rgba(255,255,255,0.3); }
       <div class="quiz-q" id="questionText"></div>
     </div>
     <div class="quiz-body">
+      <div id="multiHint" class="quiz-multi-hint" style="display:none;">Select all that apply</div>
       <div class="quiz-opts" id="optionsContainer"></div>
     </div>
     <div class="quiz-footer">
@@ -130,13 +163,15 @@ const questions = [
   {
     id: 'workplace',
     text: 'What type of workplace are you in?',
+    multi: true,
     opts: [
       { label: 'Healthcare (hospital, clinic, dental, etc.)', val: 'healthcare' },
       { label: 'Education (school, university, tutoring)', val: 'education' },
       { label: 'Corporate or business office', val: 'corporate' },
       { label: 'Nonprofit or community organization', val: 'nonprofit' },
       { label: 'Government or public sector', val: 'government' },
-      { label: 'Remote or hybrid environment', val: 'remote' }
+      { label: 'Remote or hybrid environment', val: 'remote' },
+      { label: 'Other workplace type', val: 'other' }
     ]
   },
   {
@@ -148,7 +183,8 @@ const questions = [
       { label: 'Coordinator or program staff', val: 'coordinator' },
       { label: 'Frontline or direct service worker', val: 'frontline' },
       { label: 'Educator or trainer', val: 'educator' },
-      { label: 'Administrative or operations staff', val: 'admin' }
+      { label: 'Administrative or operations staff', val: 'admin' },
+      { label: 'Other role not listed', val: 'other' }
     ]
   },
   {
@@ -160,7 +196,8 @@ const questions = [
       { label: 'Immigrant or multilingual communities', val: 'immigrant' },
       { label: 'General urban or suburban residents', val: 'general' },
       { label: 'Youth and young adults', val: 'youth' },
-      { label: 'Elderly or long-term care populations', val: 'elderly' }
+      { label: 'Elderly or long-term care populations', val: 'elderly' },
+      { label: 'Other community not listed', val: 'other' }
     ]
   },
   {
@@ -170,7 +207,8 @@ const questions = [
       { label: 'The community does not feel heard or included in decisions', val: 'unheard' },
       { label: 'Engagement efforts feel inconsistent or short-term', val: 'inconsistent' },
       { label: 'Communication barriers exist (language, access, format)', val: 'communication' },
-      { label: 'There is distrust of institutions in this community', val: 'distrust' }
+      { label: 'There is distrust of institutions in this community', val: 'distrust' },
+      { label: 'Other challenge not listed', val: 'other' }
     ],
     single: true
   },
@@ -200,7 +238,18 @@ const questions = [
 
 // ─── RESULTS LOGIC ────────────────────────────────────────────────────────────
 function generateResult(answers) {
-  const { workplace, role, community, challenge, frequency, resources } = answers;
+  let { workplace, role, community, challenge, frequency, resources } = answers;
+
+  // Multi-select workplace: prefer first recognized sector over remote/other
+  if (Array.isArray(workplace)) {
+    workplace = workplace.find(w => w !== 'remote' && w !== 'other')
+      || workplace.find(w => w !== 'other')
+      || workplace[0];
+  }
+  // 'other' on key questions falls through to the fallback chain in getResult
+  if (workplace === 'other') workplace = null;
+  if (role === 'other') role = null;
+  if (community === 'other') community = null;
 
   const results = {
 
@@ -457,17 +506,34 @@ function renderQuestion() {
   container.className = 'quiz-opts' + (q.single ? ' single-col' : '');
   container.innerHTML = '';
 
+  const multiHint = document.getElementById('multiHint');
+  if (multiHint) multiHint.style.display = q.multi ? 'block' : 'none';
+
   q.opts.forEach(opt => {
     const btn = document.createElement('button');
     btn.className = 'qopt';
     btn.textContent = opt.label;
-    if (answers[q.id] === opt.val) btn.classList.add('selected');
-    btn.onclick = () => {
-      container.querySelectorAll('.qopt').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      answers[q.id] = opt.val;
-      document.getElementById('nextBtn').disabled = false;
-    };
+
+    if (q.multi) {
+      const sel = Array.isArray(answers[q.id]) ? answers[q.id] : [];
+      if (sel.includes(opt.val)) btn.classList.add('selected');
+      btn.onclick = () => {
+        const arr = Array.isArray(answers[q.id]) ? [...answers[q.id]] : [];
+        const idx = arr.indexOf(opt.val);
+        if (idx > -1) { arr.splice(idx, 1); btn.classList.remove('selected'); }
+        else { arr.push(opt.val); btn.classList.add('selected'); }
+        answers[q.id] = arr;
+        document.getElementById('nextBtn').disabled = arr.length === 0;
+      };
+    } else {
+      if (answers[q.id] === opt.val) btn.classList.add('selected');
+      btn.onclick = () => {
+        container.querySelectorAll('.qopt').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        answers[q.id] = opt.val;
+        document.getElementById('nextBtn').disabled = false;
+      };
+    }
     container.appendChild(btn);
   });
 
@@ -479,12 +545,14 @@ function renderQuestion() {
     else if (i === current) seg.classList.add('active');
   });
 
-  document.getElementById('nextBtn').disabled = !answers[q.id];
+  const hasAnswer = q.multi ? (Array.isArray(answers[q.id]) && answers[q.id].length > 0) : !!answers[q.id];
+  document.getElementById('nextBtn').disabled = !hasAnswer;
   document.getElementById('backBtn').style.visibility = current === 0 ? 'hidden' : 'visible';
 }
 
 function goNext() {
-  if (!answers[questions[current].id]) return;
+  const _cq = questions[current];
+  if (_cq.multi ? !(Array.isArray(answers[_cq.id]) && answers[_cq.id].length > 0) : !answers[_cq.id]) return;
   if (current < questions.length - 1) {
     current++;
     renderQuestion();
@@ -521,18 +589,21 @@ function showResults() {
     healthcare: 'Healthcare', education: 'Education', corporate: 'Corporate', nonprofit: 'Nonprofit', government: 'Government', remote: 'Remote/Hybrid',
     executive: 'Executive Leadership', manager: 'Manager', coordinator: 'Coordinator', frontline: 'Frontline Worker', educator: 'Educator', admin: 'Administrative Staff',
     lowincome: 'Low-Income Communities', firstgen: 'First-Generation Students', immigrant: 'Immigrant Communities', general: 'General Urban/Suburban', youth: 'Youth Communities', elderly: 'Elderly/Long-Term Care',
-    unheard: 'Challenge: Not Feeling Heard', inconsistent: 'Challenge: Inconsistent Engagement', communication: 'Challenge: Communication Barriers', distrust: 'Challenge: Institutional Distrust'
+    unheard: 'Challenge: Not Feeling Heard', inconsistent: 'Challenge: Inconsistent Engagement', communication: 'Challenge: Communication Barriers', distrust: 'Challenge: Institutional Distrust',
+    other: 'Other'
   };
 
   const tags = document.getElementById('contextTags');
   tags.innerHTML = '';
   ['workplace', 'role', 'community', 'challenge'].forEach(key => {
-    if (answers[key]) {
+    const val = answers[key];
+    const vals = Array.isArray(val) ? val : (val ? [val] : []);
+    vals.forEach(v => {
       const span = document.createElement('span');
       span.className = 'ctx-tag';
-      span.textContent = tagMap[answers[key]] || answers[key];
+      span.textContent = tagMap[v] || v;
       tags.appendChild(span);
-    }
+    });
   });
 
   // Recommendations
@@ -561,7 +632,8 @@ document.getElementById('backBtn').addEventListener('click', function() {
 });
 
 document.getElementById('nextBtn').addEventListener('click', function() {
-  if (!answers[questions[current].id]) return;
+  const _cq = questions[current];
+  if (_cq.multi ? !(Array.isArray(answers[_cq.id]) && answers[_cq.id].length > 0) : !answers[_cq.id]) return;
   if (current < questions.length - 1) { current++; renderQuestion(); }
   else { showResults(); }
 });
@@ -588,7 +660,8 @@ document.getElementById('backBtn').addEventListener('click', function() {
   if (current > 0) { current--; renderQuestion(); }
 });
 document.getElementById('nextBtn').addEventListener('click', function() {
-  if (!answers[questions[current].id]) return;
+  const _cq = questions[current];
+  if (_cq.multi ? !(Array.isArray(answers[_cq.id]) && answers[_cq.id].length > 0) : !answers[_cq.id]) return;
   if (current < questions.length - 1) { current++; renderQuestion(); }
   else { showResults(); }
 });
